@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WARPT → IPA Converter</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #101218;
+    --panel: #191d27;
+    --panel-2: #202635;
+    --text: #f1f3f9;
+    --muted: #a7afc2;
+    --line: #343c4e;
+    --accent: #b7f397;
+    --accent-ink: #172112;
+    --focus: #d1f7bb;
+    --warn: #ffd48a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(900px 420px at 90% -10%, #27364a 0%, transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .wrap { width: min(980px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 54px; }
+  header { margin-bottom: 28px; }
+  .eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: .16em; font-size: .75rem; font-weight: 800; }
+  h1 { margin: 8px 0 8px; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.05; letter-spacing: -.045em; }
+  h1 span { color: var(--accent); }
+  .intro { color: var(--muted); max-width: 650px; margin: 0; }
+  .tag { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: .78rem; color: var(--muted); margin-top: 15px; }
+  .workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel { background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: 0 16px 45px #0002; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; background: #ffffff04; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-size: .95rem; margin: 0; }
+  .small-label { color: var(--muted); font-size: .75rem; }
+  textarea {
+    display: block; width: 100%; min-height: 260px; resize: vertical; border: 0; outline: 0;
+    background: transparent; color: var(--text); padding: 20px 18px; font: 1.02rem/1.75 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  textarea:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+  #output { min-height: 260px; padding: 20px 18px; font: 1.15rem/1.8 "Noto Sans", "Segoe UI Symbol", "Charis SIL", serif; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .placeholder { color: #7f899e; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 18px 17px; }
+  button { cursor: pointer; border: 1px solid var(--line); border-radius: 10px; padding: 9px 13px; color: var(--text); background: var(--panel-2); font: inherit; font-size: .88rem; transition: transform .12s ease, background .12s ease; }
+  button:hover { background: #2a3345; }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 750; }
+  button.primary:hover { background: #c8f9ae; }
+  .status { padding: 0 18px 16px; color: var(--muted); font-size: .8rem; min-height: 22px; }
+  .below { margin-top: 18px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; }
+  .info { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .info h2 { margin: 0 0 12px; font-size: 1rem; }
+  .mapping-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .map-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--panel-2); border: 1px solid #ffffff08; padding: 8px 10px; border-radius: 9px; font-family: ui-monospace, monospace; }
+  .map-item code { color: var(--accent); font-size: .9rem; }
+  .map-item span { color: var(--muted); }
+  .notes { color: var(--muted); margin: 0; padding-left: 19px; }
+  .notes li + li { margin-top: 8px; }
+  .foot { margin-top: 20px; color: var(--muted); font-size: .8rem; text-align: center; }
+  .foot strong { color: var(--text); }
+  @media (max-width: 720px) {
+    .workspace, .below { grid-template-columns: 1fr; }
+    textarea, #output { min-height: 190px; }
+    .mapping-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .wrap { padding-top: 28px; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <div class="eyebrow">A tiny tool for conlangers</div>
+    <h1><span>WARPT</span> → IPA</h1>
+    <p class="intro">Wer’s Amazing, Reliable Phonetic Transcription. Type in WARPT, get IPA back. Conversion happens locally in your browser, so your text stays on your device.</p>
+    <div class="tag">v0.1 · live conversion · no account, no fuss</div>
+  </header>
+
+  <section class="workspace" aria-label="Transcription converter">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>WARPT input</h2><span class="small-label">Your notation</span>
+      </div>
+      <textarea id="source" spellcheck="false" aria-label="WARPT input" placeholder="Type WARPT here…&#10;&#10;Example: !si:tSor# kofkS"></textarea>
+      <div class="actions">
+        <button class="primary" id="convert">Convert to IPA ↓</button>
+        <button id="example">Load example</button>
+        <button id="clear">Clear</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>IPA output</h2><span class="small-label">Converted transcription</span>
+      </div>
+      <div id="output" aria-live="polite" class="placeholder">Your IPA will appear here…</div>
+      <div class="actions">
+        <button class="primary" id="copy">Copy IPA</button>
+        <button id="select">Select output</button>
+      </div>
+      <div class="status" id="status">Ready when you are.</div>
+    </div>
+  </section>
+
+  <section class="below">
+    <div class="info">
+      <h2>Current symbol key</h2>
+      <div class="mapping-grid" id="mappingGrid"></div>
+    </div>
+    <div class="info">
+      <h2>How this version works</h2>
+      <ul class="notes">
+        <li>Longer tokens are matched first, so <code>tS</code> becomes one affricate.</li>
+        <li><code>!</code> marks primary stress; <code>¡</code> marks secondary stress.</li>
+        <li><code>r#</code> represents the alveolar tap /ɾ/.</li>
+        <li><code>:</code> adds the IPA length mark. <code>~</code> adds a combining nasalization mark to the preceding character.</li>
+        <li>Ordinary letters and punctuation pass through unchanged unless listed in the symbol key.</li>
+      </ul>
+    </div>
+  </section>
+  <p class="foot"><strong>WARPT</strong> is your custom notation, so this converter follows the mappings currently documented here. Check the symbol key as the system evolves.</p>
+</main>
+<script>
+(() => {
+  // Longer keys are checked first, so r# and tS take precedence over their parts.
+  const mappings = [
+    ["r#", "ɾ"], ["tS", "t͡ʃ"],
+    ["B", "β"], ["D", "ð"], ["Y", "ɣ"], ["R", "ʁ"], ["S", "ʃ"], ["T", "θ"],
+    ["A", "æ"], ["E", "ɛ"], ["I", "ɪ"], ["O", "ɔ"], ["U", "ʊ"],
+    [":", "ː"], ["!", "ˈ"], ["¡", "ˌ"]
+  ];
+  const map = new Map(mappings);
+  const source = document.getElementById("source");
+  const output = document.getElementById("output");
+  const status = document.getElementById("status");
+  const mappingGrid = document.getElementById("mappingGrid");
+
+  mappings.forEach(([key, value]) => {
+    const item = document.createElement("div");
+    item.className = "map-item";
+    const code = document.createElement("code");
+    code.textContent = key;
+    const val = document.createElement("span");
+    val.textContent = value;
+    item.append(code, val);
+    mappingGrid.append(item);
+  });
+  const sortedKeys = [...map.keys()].sort((a, b) => b.length - a.length);
+
+  function convert(text) {
+    let result = "";
+    for (let i = 0; i < text.length;) {
+      if (text[i] === "~") {
+        // Nasalization is a combining diacritic. Attach it to the preceding output character.
+        if (result.length > 0 && !/\s/.test(result[result.length - 1])) {
+          result += "\u0303";
+        } else {
+          result += "~";
+        }
+        i++;
+        continue;
+      }
+      let matched = false;
+      for (const key of sortedKeys) {
+        if (text.startsWith(key, i)) {
+          result += map.get(key);
+          i += key.length;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        result += text[i];
+        i++;
+      }
+    }
+    return result;
+  }
+
+  function update() {
+    const value = source.value;
+    const converted = convert(value);
+    output.textContent = converted || "Your IPA will appear here…";
+    output.classList.toggle("placeholder", !converted);
+    status.textContent = value ? "Converted live · " + value.length + " characters in" : "Ready when you are.";
+  }
+  source.addEventListener("input", update);
+  document.getElementById("convert").addEventListener("click", update);
+  document.getElementById("clear").addEventListener("click", () => {
+    source.value = "";
+    update();
+    source.focus();
+  });
+  document.getElementById("example").addEventListener("click", () => {
+    source.value = "!si:tSor# kofkS !aftSi !mintSja";
+    update();
+    source.focus();
+  });
+  document.getElementById("copy").addEventListener("click", async () => {
+    const value = output.classList.contains("placeholder") ? "" : output.textContent;
+    if (!value) { status.textContent = "Nothing to copy yet."; return; }
+    try {
+      await navigator.clipboard.writeText(value);
+      status.textContent = "IPA copied to clipboard!";
+    } catch {
+      status.textContent = "Clipboard access was blocked. Use “Select output” and copy manually.";
+    }
+  });
+  document.getElementById("select").addEventListener("click", () => {
+    const range = document.createRange();
+    range.selectNodeContents(output);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    status.textContent = "Output selected. Press Ctrl+C or ⌘C to copy.";
+  });
+  update();
+})();
+</script>
+</body>
+</html>
